@@ -4,6 +4,8 @@ This was a copy and slight modification of https://github.com/avanishsubbiah/ter
 I just added in error handling, seperated converter and animator, and a few other minor tweeks that were bugging me.
 
 ## Instalation
+git clone https://github.com/jonahksimmons/gif2ascii
+cd gif2ascii
 sudo make install
 
 ## Usage
