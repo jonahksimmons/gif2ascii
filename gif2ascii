@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+# Converts a gif to a directory of ascii files
+# can animate at anytime with animateDir.
+# Modified by: Jonah Simmons
+# date: 2021-12-11
+# dependencies: bash (obviously), coreutils, ffmpeg (or imagemagick), jp2a (or libcaca), bc
+# original author: Joe Shields
+# original date: 2020-12-21
+
+case ${1} in
+	-h | --help)
+		echo "Usage: gif2ascii [FILE]"
+		echo "Coverts each frame of FILE to an ascii frame in directory ./FILE-ascii/."
+		exit
+	;;
+esac
+
+
+# ----- config -----
+sourceFile="$1" # gif or video to display
+save_path="$1-acsii" # directory to save the files to
+txt_opts="--colors" # options to pass to the image->text conversion tool
+txtConvert=jp2a # tool to convert images to text; jp2a (default) or img2txt
+
+# ----- prep work -----
+bn="${sourceFile##*/}" # remove leading directories
+tmpdirHeader="/tmp/frames-"
+tmpdir="${tmpdirHeader}${bn%.*}" # form a directory name and remove extension
+
+# Removes any previously converted files to remove errors in output
+# without this, if you are converting multiple files wit the same name,
+# it keeps past frames and messed it up.
+rm -r ${tmpdirHeader}*
+mkdir -p "$tmpdir"
+mkdir -p "${save_path}"
+
+printf "exploding frames to $tmpdir...\n"
+failedExploding=0
+ffmpeg -n -loglevel error -i "$sourceFile" "$tmpdir"/frame%05d.png \
+|| printf 'falling back to imagemagick for explosion...\n' \
+&& convert -coalesce "$sourceFile" "$tmpdir"/frame%05d.png \
+|| failedExploding=1
+
+if [ $failedExploding = 1 ]; then
+	echo ""
+	echo "INVALID FILE FORMAT: ${1}"
+	echo "Expecting a gif formated file."
+	rm -r ${save_path}
+	rm -r ${tmpdir}
+	exit
+fi
+
+duration=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -i "$sourceFile") \
+    || printf 'falling back to imagemagick for duration measuring...\n' \
+    && duration=$(printf "scale=6; ($(identify -format "%T+" "$sourceFile")0)/100\n" | bc)
+nframes=$(ls "$tmpdir" | wc -l)
+# If txtConvert is not found,          check if jp2a is available and use it,   otherwise use img2txt.
+type "$txtConvert" > /dev/null 2>&1 || type jp2a > /dev/null && txtConvert=jp2a || txtConvert=img2txt
+printf "conversion tool is $txtConvert\n"
+printf "converting exploded frames to text...\n"
+declare -a frames
+for f in "$tmpdir"/*
+do # create an array holding the text for each frame
+    frames+=("$($txtConvert $txt_opts "$f")")
+done
+
+# ----- writing function -----
+writeToDir() {
+    trap "return 0;" SIGINT SIGQUIT # exit the function if interrupted or quit
+#    while :
+#    do
+    i=0
+    for f in "${frames[@]}"
+    do 
+    #"\033c" "\e[0;0H%s" "$f" 
+    	if [ ${i} -lt 10 ]; then  # to make sure that they will be played back in order
+		printf "$f" >> $save_path/0$i
+	else
+		printf "$f" >> $save_path/$i
+	fi
+        #echo "$save_path" "$1"
+        i=$(($i + 1))
+    done
+#    done
+}
+
+writeToDir
+trap "return 0;" SIGINT SIGQUIT # exit the function if interrupted or quit
+exit 0

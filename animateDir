@@ -1,0 +1,30 @@
+#!/usr/bin/zsh
+
+# Needs to be zsh for float arithmatic
+
+case ${1} in
+	-h | --help)
+		echo "Usage: animateDir [DIRECTORY] [FRAME_RATE]"
+		echo "Animates the contents of files in DIRECTORY at FRAME_RATE (default is 24fps)."
+		echo ""
+		echo "Examples:"
+		echo "animateDir d		Animates the contents of d at 24fps"
+		echo "animateDir g 60		Animates the contents of g at 60fps"
+		exit
+	;;
+esac
+
+Directory=$1
+Rate=${2:-24}
+Rate=$((1 / ${Rate}.))
+
+while true
+do
+	for i in $(ls ${Directory})
+	do
+		clear;
+		cat ${Directory}/${i};
+		sleep ${Rate};
+	done;
+done;
+
