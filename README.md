@@ -19,9 +19,9 @@ Animates the contents of files in DIRECTORY at FRAME_RATE (default is 24fps).
 
 Examples:
 
-animateDir d		Animates the contents of d at 24fps
+animateDir example
 
-animateDir g 60		Animates the contents of g at 60fps
+animateDir g 60
 
 
 ## Dependecies
